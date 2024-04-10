@@ -14,7 +14,8 @@ OUT_PATH = config['PATHS']['OUT_PATH']
 def main():
     p = Playlist(argv[1])
     directory = OUT_PATH + '\\' + p.title
-    os.system(f'mkdir "{directory}"')
+    if(not os.path.isdir(directory)):
+        os.system(f'mkdir "{directory}"')
     Single.set_out_path(directory)
     for v in p.url_generator():
         Single.download(v, len(argv) == 3)
