@@ -4,6 +4,7 @@ from sys import argv
 from configparser import ConfigParser
 
 from pytube import YouTube
+from yt_dlp import YoutubeDL
 
 config = ConfigParser()
 config.read('config.ini')
@@ -20,18 +21,20 @@ class Single():
     @staticmethod
     def download(url, audio_only = False):
         try:
-            y = YouTube(url = url)
+            with YoutubeDL() as ytdl:
+                title = ytdl.extract_info(url, download = False).get('title', None)
+            ## y = YouTube(url = url)
         except Exception as e:
-            print(e)
+            print(f'Exception: {e}')
             exit(1)
             
-        print(f'Title: {y.title}')
+        print(f'Title: {title}')
         ## print('Available versions:')
 
         ## GET ALL VIDEOS AND SORT BY RESOLUTION
-        video_list = list(y.streams.filter(type = 'video').order_by('resolution'))
+        ## video_list = list(y.streams.filter(type = 'video').order_by('resolution'))
         ## print(*y.streams, sep = '\n')
-        highest_res = video_list[-1]
+        ## highest_res = video_list[-1]
         ## the command below does not have the desired behaviour
         ## highest_res = y.streams.filter(file_extension = 'mp4').get_highest_resolution()
         ## https://pytube.io/en/latest/user/streams.html?highlight=progressive#dash-vs-progressive-streams
@@ -43,7 +46,7 @@ class Single():
         ## print(f'The version with the highest resolution: {highest_res}')
 
         ## GET SANITIZED TITLE FOR FILENAMES AND FILE EXTENSION
-        title = re.sub(r'[^\u0370-\u03ff\u1f00-\u1fffa-zA-Z0-9 ]', '', highest_res.default_filename.split('.')[0])
+        title = re.sub(r'[^\u0370-\u03ff\u1f00-\u1fffa-zA-Z0-9 ]', '', title)
         ## the regular expression above matches all greek and latin characters, the digits and the space
         title = ' '.join(title.split())
         ## extension = highest_res.default_filename.split('.')[1]
@@ -53,11 +56,11 @@ class Single():
         ## DOWNLOAD HIGHEST RESOLUTION
         if(not audio_only):
             ## highest_res.download(output_path = OUT_PATH, filename = video_filename)
-            print('Downloading highest resolution video with yt-dlp')
+            print('Downloading highest resolution video')
             try:
                 os.system(f'yt-dlp -f bestvideo/best -o "{OUT_PATH}\\{video_filename}" {url}')
             except Exception as e:
-                print(e)
+                print(f'Exception: {e}')
                 exit(1)
 
         ## EXAMINE IF THE HIGHEST RESOLUTION VIDEO IS "PROGRESSIVE", THAT
@@ -71,19 +74,23 @@ class Single():
         ## else:
         ## print('Highest resolution video file does not contain sound. Available audio files:')
         ## TODO: prioritize mp4 audio over webm
-        audio_list = list(y.streams.filter(type = 'audio', subtype = 'mp4').order_by('abr'))
+        ## audio_list = list(y.streams.filter(type = 'audio', subtype = 'mp4').order_by('abr'))
+        '''
         if(not audio_list):
             audio_list = list(y.streams.filter(type = 'audio').order_by('abr'))
         ## print(*audio_list, sep = '\n')
         highest_br = audio_list[-1]
         print(f'The version with the highest bit rate: {highest_br}')
-        print('Downloading audio with pytube')
+        
         extension = highest_br.default_filename.split('.')[1]
-        audio_filename = f'{title}_audio.{extension}'
+        '''
+        print('Downloading audio')
+        audio_filename = f'{title}_audio.mp4'
         try:
-            highest_br.download(output_path = OUT_PATH, filename = audio_filename)
+            ## highest_br.download(output_path = OUT_PATH, filename = audio_filename)
+            os.system(f'yt-dlp -f bestaudio/best -o "{OUT_PATH}\\{audio_filename}" {url}')
         except Exception as e:
-            print(e)
+            print(f'Exception: {e}')
             exit(1)
         if(not audio_only):
             print('Merging files with ffmpeg')
@@ -93,7 +100,7 @@ class Single():
                     os.remove(f'{OUT_PATH}\\{video_filename}')
                     os.remove(f'{OUT_PATH}\\{audio_filename}')
                 except Exception as e:
-                    print(e)
+                    print(f'Exception: {e}')
                     exit(1)
         
 if(__name__ == '__main__'):
