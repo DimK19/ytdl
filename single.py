@@ -58,7 +58,7 @@ class Single():
             ## highest_res.download(output_path = OUT_PATH, filename = video_filename)
             print('Downloading highest resolution video')
             try:
-                os.system(f'yt-dlp -f bestvideo/best -o "{OUT_PATH}\\{video_filename}" {url}')
+                os.system(f'yt-dlp -f bestvideo[ext=mp4] -o "{OUT_PATH}\\{video_filename}" {url}')
             except Exception as e:
                 print(f'Exception: {e}')
                 exit(1)
@@ -88,7 +88,7 @@ class Single():
         audio_filename = f'{title}_audio.mp4'
         try:
             ## highest_br.download(output_path = OUT_PATH, filename = audio_filename)
-            os.system(f'yt-dlp -f bestaudio/best -o "{OUT_PATH}\\{audio_filename}" {url}')
+            os.system(f'yt-dlp -f bestaudio[ext=mp4] -o "{OUT_PATH}\\{audio_filename}" {url}')
         except Exception as e:
             print(f'Exception: {e}')
             exit(1)
