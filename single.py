@@ -7,19 +7,22 @@ from pytube import YouTube
 from yt_dlp import YoutubeDL
 
 config = ConfigParser()
-config.read('config.ini')
+config.read('config.ini', encoding = 'utf-8')
 
 OUT_PATH = config['PATHS']['OUT_PATH']
 FFMPEG_PATH = config['PATHS']['FFMPEG_PATH']
 
 class Single():
     @staticmethod
-    def set_out_path(path):
+    def set_out_path(path: str):
         global OUT_PATH
         OUT_PATH = path
     
     @staticmethod
-    def download(url, audio_only = False):
+    def download(url: str, audio_only: bool = False):
+        if(not os.path.isdir(OUT_PATH)):
+            raise SystemExit(f'Out path does not exist {OUT_PATH}')
+        url = url.split('&')[0]
         try:
             with YoutubeDL() as ytdl:
                 title = ytdl.extract_info(url, download = False).get('title', None)
