@@ -1,9 +1,8 @@
 import re
 import os
-from sys import argv
+import sys
 from configparser import ConfigParser
 
-from pytube import YouTube
 from yt_dlp import YoutubeDL
 
 config = ConfigParser()
@@ -12,26 +11,29 @@ config.read('config.ini', encoding = 'utf-8')
 OUT_PATH = config['PATHS']['OUT_PATH']
 FFMPEG_PATH = config['PATHS']['FFMPEG_PATH']
 
+PREEXISTING = map(lambda x: x.split('.')[0], os.listdir(OUT_PATH))
+
 class Single():
     @staticmethod
     def set_out_path(path: str):
-        global OUT_PATH
+        global OUT_PATH, PREEXISTING
         OUT_PATH = path
+        PREEXISTING = map(lambda x: x.split('.')[0], os.listdir(OUT_PATH))
     
     @staticmethod
     def download(url: str, audio_only: bool = False):
         if(not os.path.isdir(OUT_PATH)):
-            raise SystemExit(f'Out path does not exist {OUT_PATH}')
+            raise Systemsys.exit(f'Out path does not exist {OUT_PATH}')
         url = url.split('&')[0]
         try:
             with YoutubeDL() as ytdl:
                 title = ytdl.extract_info(url, download = False).get('title', None)
-            ## y = YouTube(url = url)
         except Exception as e:
             print(f'Exception: {e}')
-            exit(1)
+            sys.exit(1)
             
         print(f'Title: {title}')
+            
         ## print('Available versions:')
 
         ## GET ALL VIDEOS AND SORT BY RESOLUTION
@@ -52,6 +54,10 @@ class Single():
         title = re.sub(r'[^\u0370-\u03ff\u1f00-\u1fffa-zA-Z0-9 ]', '', title)
         ## the regular expression above matches all greek and latin characters, the digits and the space
         title = ' '.join(title.split())
+        
+        if(title in PREEXISTING):
+            print('Video already downloaded.')
+            sys.exit(0)
         ## extension = highest_res.default_filename.split('.')[1]
         ## video_filename = f'{title}.{extension}'
         video_filename = f'{title}_video.mp4'
@@ -64,7 +70,7 @@ class Single():
                 os.system(f'yt-dlp -f bestvideo[ext=mp4] -o "{OUT_PATH}\\{video_filename}" {url}')
             except Exception as e:
                 print(f'Exception: {e}')
-                exit(1)
+                sys.exit(1)
 
         ## EXAMINE IF THE HIGHEST RESOLUTION VIDEO IS "PROGRESSIVE", THAT
         ## IS, IF IT CONTAINS SOUND
@@ -94,23 +100,24 @@ class Single():
             os.system(f'yt-dlp -f bestaudio[ext=mp4] -o "{OUT_PATH}\\{audio_filename}" {url}')
         except Exception as e:
             print(f'Exception: {e}')
-            exit(1)
+            sys.exit(1)
         if(not audio_only):
             print('Merging files with ffmpeg')
             if(os.path.isfile(f'{OUT_PATH}\\{audio_filename}') and os.path.isfile(f'{OUT_PATH}\\{video_filename}')):
                 try:
-                    os.system(f'{FFMPEG_PATH}\\ffmpeg -i "{OUT_PATH}\\{video_filename}" -i "{OUT_PATH}\\{audio_filename}" -c copy "{OUT_PATH}\\{title}.mp4"')
-                    os.remove(f'{OUT_PATH}\\{video_filename}')
-                    os.remove(f'{OUT_PATH}\\{audio_filename}')
+                    cmd = os.system(f'{FFMPEG_PATH}\\ffmpeg -i "{OUT_PATH}\\{video_filename}" -i "{OUT_PATH}\\{audio_filename}" -c copy "{OUT_PATH}\\{title}.mp4"')
+                    if(cmd == 0):
+                        os.remove(f'{OUT_PATH}\\{video_filename}')
+                        os.remove(f'{OUT_PATH}\\{audio_filename}')
                 except Exception as e:
                     print(f'Exception: {e}')
-                    exit(1)
+                    sys.exit(1)
         
 if(__name__ == '__main__'):
-    if(len(argv) != 2 and len(argv) != 3):
+    if(len(sys.argv) != 2 and len(sys.argv) != 3):
         print('Invalid arguments')
-        exit(1)
-    if(len(argv) == 3 and argv[2] != '/a'):
+        sys.exit(1)
+    if(len(sys.argv) == 3 and sys.argv[2] != '/a'):
         print('Invalid third argument')
-        exit(1)
-    Single.download(argv[1], len(argv) == 3)
+        sys.exit(1)
+    Single.download(sys.argv[1], len(sys.argv) == 3)
