@@ -4,7 +4,7 @@ from configparser import ConfigParser
 import os
 import re
 
-from single import Single
+from single import Single, SingleException
 
 from pytube import Playlist
 
@@ -25,7 +25,11 @@ def main():
         ## https://www.youtube.com/playlist?list=PL9wtvO3_pCB1BRuwbwI8-u3i3-CW3YX-y
         ## if(skip < 97):
             ## continue
-        Single.download(v, len(sys.argv) == 3)
+        try:
+            Single.download(v, len(sys.argv) == 3)
+        except SingleException as e:
+            print(f'Exception: {e}')
+            continue
         i += 1
         if(i == 10):
             break
