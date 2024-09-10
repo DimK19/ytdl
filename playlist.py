@@ -22,7 +22,10 @@ def main():
     ## skip = 0
     for v in p.url_generator():
         ## skip += 1
+        ## Μπαμπινιώτης:
         ## https://www.youtube.com/playlist?list=PL9wtvO3_pCB1BRuwbwI8-u3i3-CW3YX-y
+        ## Κούτυλας:
+        ## https://www.youtube.com/playlist?list=PLi1hj7aavfxy7k6SOaNcM6OneaUFmhwUD
         ## if(skip < 97):
             ## continue
         try:

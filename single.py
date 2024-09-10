@@ -2,6 +2,7 @@ import re
 import os
 import sys
 from configparser import ConfigParser
+import pickle
 
 from yt_dlp import YoutubeDL
 
@@ -11,7 +12,7 @@ config.read('config.ini', encoding = 'utf-8')
 OUT_PATH = config['PATHS']['OUT_PATH']
 FFMPEG_PATH = config['PATHS']['FFMPEG_PATH']
 
-PREEXISTING = map(lambda x: x.split('.')[0], os.listdir(OUT_PATH))
+PREEXISTING = []
 
 def sanitize(s: str):
     res = re.sub(r'[^\u0370-\u03ff\u1f00-\u1fffa-zA-Z0-9 ]', '', s.strip())
@@ -31,12 +32,16 @@ class Single():
     def set_out_path(path: str):
         global OUT_PATH, PREEXISTING
         OUT_PATH = path
-        PREEXISTING = list(map(lambda x: x.split('.')[0], os.listdir(OUT_PATH)))
+        if(not os.path.isdir(OUT_PATH)):
+            raise Systemsys.exit(f'Out path does not exist {OUT_PATH}')
+        if(os.path.isfile(f'{OUT_PATH}\\preexisting.pkl')):
+            with open(f'{OUT_PATH}\\preexisting.pkl', 'rb') as f:
+                PREEXISTING = pickle.load(f)
+        else:
+            PREEXISTING = list(map(lambda x: x.split('.')[0], os.listdir(OUT_PATH)))
     
     @staticmethod
     def download(url: str, audio_only: bool = False):
-        if(not os.path.isdir(OUT_PATH)):
-            raise Systemsys.exit(f'Out path does not exist {OUT_PATH}')
         url = url.split('&')[0]
         try:
             with YoutubeDL() as ytdl:
@@ -75,6 +80,7 @@ class Single():
                 sys.exit(0)
             else:
                 raise SingleException('Video already downloaded.')
+
         ## extension = highest_res.default_filename.split('.')[1]
 
         ytdl_title = f"{original_title} [{url.split('/')[-1].split('&')[0][8:]}]"
@@ -179,6 +185,11 @@ class Single():
                     else:
                         raise SingleException(f'{e}')
         
+        ## Finally append new file name to pickle
+        PREEXISTING.append(title)
+        with open(f'{OUT_PATH}\\preexisting.pkl', 'wb') as f:
+            pickle.dump(PREEXISTING, f)
+
 if(__name__ == '__main__'):
     if(len(sys.argv) != 2 and len(sys.argv) != 3):
         print('Invalid arguments')
@@ -186,4 +197,5 @@ if(__name__ == '__main__'):
     if(len(sys.argv) == 3 and sys.argv[2] != '/a'):
         print('Invalid third argument')
         sys.exit(1)
+    Single.set_out_path(OUT_PATH)
     Single.download(sys.argv[1], len(sys.argv) == 3)
