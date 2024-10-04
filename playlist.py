@@ -3,6 +3,7 @@ from time import sleep
 from configparser import ConfigParser
 import os
 import re
+from pathlib import Path
 
 from single import Single, SingleException
 
@@ -10,15 +11,15 @@ from pytube import Playlist
 
 config = ConfigParser()
 config.read('config.ini', encoding = 'utf-8')
-OUT_PATH = config['PATHS']['OUT_PATH']
+OUT_PATH = Path(config['PATHS']['OUT_PATH'])
 
 def main():
     p = Playlist(sys.argv[1])
-    directory = OUT_PATH + '\\' + re.sub(r'[^\u0370-\u03ff\u1f00-\u1fffa-zA-Z0-9 ]', '', p.title)
+    directory = Path.joinpath(OUT_PATH, re.sub(r'[^\u0370-\u03ff\u1f00-\u1fffa-zA-Z0-9 ]', '', p.title))
     if(not os.path.isdir(directory)):
-        os.system(f'mkdir "{directory}"')
+        os.mkdir(str(directory))
     Single.set_out_path(directory)
-    i = 0
+    ## i = 0
     ## skip = 0
     for v in p.url_generator():
         ## skip += 1
@@ -33,9 +34,9 @@ def main():
         except SingleException as e:
             print(f'Exception: {e}')
             continue
-        i += 1
-        if(i == 10):
-            break
+        ## i += 1
+        ## if(i == 10):
+        ##    break
         sleep(30)
 
 if(__name__ == '__main__'):

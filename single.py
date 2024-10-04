@@ -3,14 +3,16 @@ import os
 import sys
 from configparser import ConfigParser
 import pickle
+from pathlib import Path
 
 from yt_dlp import YoutubeDL
 
 config = ConfigParser()
 config.read('config.ini', encoding = 'utf-8')
 
-OUT_PATH = config['PATHS']['OUT_PATH']
-FFMPEG_PATH = config['PATHS']['FFMPEG_PATH']
+OUT_PATH = Path(config['PATHS']['OUT_PATH'])
+FFMPEG_PATH = Path(config['PATHS']['FFMPEG_PATH'])
+PKLP = Path.joinpath(OUT_PATH, 'preexisting.pkl')
 
 PREEXISTING = []
 
@@ -29,13 +31,15 @@ class SingleException(Exception):
 
 class Single():
     @staticmethod
-    def set_out_path(path: str):
-        global OUT_PATH, PREEXISTING
-        OUT_PATH = path
+    def set_out_path(p: str):
+        global OUT_PATH, PREEXISTING, PKLP
+        OUT_PATH = Path(p)
         if(not os.path.isdir(OUT_PATH)):
-            raise Systemsys.exit(f'Out path does not exist {OUT_PATH}')
-        if(os.path.isfile(f'{OUT_PATH}\\preexisting.pkl')):
-            with open(f'{OUT_PATH}\\preexisting.pkl', 'rb') as f:
+            raise Systemsys.exit(f'Out path does not exist {str(OUT_PATH)}')
+        
+        PKLP = Path.joinpath(OUT_PATH, 'preexisting.pkl')
+        if(os.path.isfile(PKLP)):
+            with open(str(PKLP), 'rb') as f:
                 PREEXISTING = pickle.load(f)
         else:
             PREEXISTING = list(map(lambda x: x.split('.')[0], os.listdir(OUT_PATH)))
@@ -89,7 +93,7 @@ class Single():
             ## highest_res.download(output_path = OUT_PATH, filename = video_filename)
             print('Downloading highest resolution video')
             try:
-                cmd = os.system(f'yt-dlp -f bestvideo -P "{OUT_PATH}" {url}')
+                cmd = os.system(f'yt-dlp -f bestvideo -P "{str(OUT_PATH)}" {url}')
                 '''
                 WARNING: "-f best" selects the best pre-merged format which is often not the best option.
                 To let yt-dlp download and merge the best available formats, simply do not pass any format selection.
@@ -137,18 +141,17 @@ class Single():
                     break
             
             if(not(new_file is None)):
-                video_filename = f'{OUT_PATH}\\{title}_video.{new_ext}'
-                os.rename(f'{OUT_PATH}\\{new_file}', video_filename)
+                video_filename = Path.joinpath(OUT_PATH, f'{title}_video.{new_ext}')
+                os.rename(str(Path.joinpath(OUT_PATH, new_file)), str(video_filename))
             else:
                 raise SingleException()
                 exit(1)
         
         print('Downloading audio')
-        audio_filename = f'{title}_audio.mp4'
         try:
             ## highest_br.download(output_path = OUT_PATH, filename = audio_filename)
             ## os.system(f'yt-dlp -f bestaudio[ext=mp4] -o "{OUT_PATH}\\{audio_filename}" {url}')
-            os.system(f'yt-dlp -f bestaudio -P "{OUT_PATH}" {url}')
+            os.system(f'yt-dlp -f bestaudio -P "{str(OUT_PATH)}" {url}')
         except Exception as e:
             if(__name__ == '__main__'):
                 print(f'Exception: {e}')
@@ -165,17 +168,19 @@ class Single():
                 new_ext_audio = i.split('.')[-1]
                 break
         
-        audio_filename = f'{OUT_PATH}\\{title}_audio.{new_ext_audio}'
-        os.rename(f'{OUT_PATH}\\{new_file_audio}', audio_filename)
-        
         if(not audio_only):
             print('Merging files with ffmpeg')
-            if(os.path.isfile(f'{audio_filename}') and os.path.isfile(f'{video_filename}')):
+            
+            audio_filename = Path.joinpath(OUT_PATH, f'{title}_audio.{new_ext_audio}')
+            os.rename(str(Path.joinpath(OUT_PATH, new_file_audio)), str(audio_filename))
+            
+            if(os.path.isfile(audio_filename) and os.path.isfile(video_filename)):
                 try:
-                    cmd = os.system(f'{FFMPEG_PATH}\\ffmpeg -i "{video_filename}" -i "{audio_filename}" -c copy "{OUT_PATH}\\{title}.{new_ext}"')
+                    merged_filename = Path.joinpath(OUT_PATH, f'{title}.{new_ext}')
+                    cmd = os.system(f'{str(Path.joinpath(FFMPEG_PATH, "ffmpeg"))} -i "{str(video_filename)}" -i "{str(audio_filename)}" -c copy "{str(merged_filename)}"')
                     if(cmd == 0):
-                        os.remove(f'{video_filename}')
-                        os.remove(f'{audio_filename}')
+                        os.remove(str(video_filename))
+                        os.remove(str(audio_filename))
                     else:
                         raise SingleException('FFMPEG Error')
                 except Exception as e:
@@ -184,10 +189,13 @@ class Single():
                         sys.exit(1)
                     else:
                         raise SingleException(f'{e}')
-        
+        else:
+            audio_filename = Path.joinpath(OUT_PATH, f'{title}.{new_ext_audio}')
+            os.rename(str(Path.joinpath(OUT_PATH, new_file_audio)), str(audio_filename))
+
         ## Finally append new file name to pickle
         PREEXISTING.append(title)
-        with open(f'{OUT_PATH}\\preexisting.pkl', 'wb') as f:
+        with open(PKLP, 'wb') as f:
             pickle.dump(PREEXISTING, f)
 
 if(__name__ == '__main__'):
