@@ -168,11 +168,12 @@ class Single():
                 new_ext_audio = i.split('.')[-1]
                 break
         
-        audio_filename = Path.joinpath(OUT_PATH, f'{title}_audio.{new_ext_audio}')
-        os.rename(str(Path.joinpath(OUT_PATH, new_file_audio)), str(audio_filename))
-        
         if(not audio_only):
             print('Merging files with ffmpeg')
+            
+            audio_filename = Path.joinpath(OUT_PATH, f'{title}_audio.{new_ext_audio}')
+            os.rename(str(Path.joinpath(OUT_PATH, new_file_audio)), str(audio_filename))
+            
             if(os.path.isfile(audio_filename) and os.path.isfile(video_filename)):
                 try:
                     merged_filename = Path.joinpath(OUT_PATH, f'{title}.{new_ext}')
@@ -188,7 +189,10 @@ class Single():
                         sys.exit(1)
                     else:
                         raise SingleException(f'{e}')
-        
+        else:
+            audio_filename = Path.joinpath(OUT_PATH, f'{title}.{new_ext_audio}')
+            os.rename(str(Path.joinpath(OUT_PATH, new_file_audio)), str(audio_filename))
+
         ## Finally append new file name to pickle
         PREEXISTING.append(title)
         with open(PKLP, 'wb') as f:
