@@ -4,6 +4,7 @@ import sys
 from configparser import ConfigParser
 import pickle
 from pathlib import Path
+import argparse
 
 from yt_dlp import YoutubeDL
 
@@ -23,9 +24,10 @@ def sanitize(s: str):
 
 class SingleException(Exception):
     _message = 'Exception from Single'
-    def __init__(self, m: str):
+
+    def __init__(self, m: str = _message):
         self._message = m
-    
+
     def __str__(self):
         return self._message
 
@@ -36,29 +38,32 @@ class Single():
         OUT_PATH = Path(p)
         if(not os.path.isdir(OUT_PATH)):
             raise Systemsys.exit(f'Out path does not exist {str(OUT_PATH)}')
-        
+
         PKLP = Path.joinpath(OUT_PATH, 'preexisting.pkl')
         if(os.path.isfile(PKLP)):
             with open(str(PKLP), 'rb') as f:
                 PREEXISTING = pickle.load(f)
         else:
             PREEXISTING = list(map(lambda x: x.split('.')[0], os.listdir(OUT_PATH)))
-    
+
     @staticmethod
-    def download(url: str, audio_only: bool = False):
+    def download(url: str, t: str = None, audio_only: bool = False):
         url = url.split('&')[0]
-        try:
-            with YoutubeDL() as ytdl:
-                original_title = ytdl.extract_info(url, download = False).get('title', None)
-        except Exception as e:
-            if(__name__ == '__main__'):
-                print(f'Exception: {e}')
-                sys.exit(1)
-            else:
-                raise SingleException(f'{e}')
-            
+
+        if(t is None)
+            try:
+                with YoutubeDL() as ytdl:
+                    original_title = ytdl.extract_info(url, download = False).get('title', None)
+            except Exception as e:
+                if(__name__ == '__main__'):
+                    print(f'Exception: {e}')
+                    sys.exit(1)
+                else:
+                    raise SingleException(f'{e}')
+        else:
+            original_title = t
         print(f'Title: {original_title}')
-            
+
         ## print('Available versions:')
 
         ## GET ALL VIDEOS AND SORT BY RESOLUTION
@@ -77,14 +82,14 @@ class Single():
 
         ## GET SANITIZED TITLE FOR FILENAMES AND FILE EXTENSION
         title = sanitize(original_title)
-                
+        '''
         if(title in PREEXISTING):
             if(__name__ == '__main__'):
                 print('Video already downloaded.')
                 sys.exit(0)
             else:
                 raise SingleException('Video already downloaded.')
-
+        '''
         ## extension = highest_res.default_filename.split('.')[1]
 
         ytdl_title = f"{original_title} [{url.split('/')[-1].split('&')[0][8:]}]"
@@ -94,6 +99,7 @@ class Single():
             print('Downloading highest resolution video')
             try:
                 cmd = os.system(f'yt-dlp -f bestvideo -P "{str(OUT_PATH)}" {url}')
+                ## cmd = os.system(f'yt-dlp -f bestvideo --cookies-from-browser firefox -P "{str(OUT_PATH)}" {url}')
                 '''
                 WARNING: "-f best" selects the best pre-merged format which is often not the best option.
                 To let yt-dlp download and merge the best available formats, simply do not pass any format selection.
@@ -126,10 +132,10 @@ class Single():
             ## print(*audio_list, sep = '\n')
             highest_br = audio_list[-1]
             print(f'The version with the highest bit rate: {highest_br}')
-            
+
             extension = highest_br.default_filename.split('.')[1]
             '''
-        
+
             ## GET NAME OF DOWNLOADED VIDEO
             new_file = None
             new_ext = None
@@ -139,18 +145,19 @@ class Single():
                     new_file = i
                     new_ext = i.split('.')[-1]
                     break
-            
+
             if(not(new_file is None)):
                 video_filename = Path.joinpath(OUT_PATH, f'{title}_video.{new_ext}')
                 os.rename(str(Path.joinpath(OUT_PATH, new_file)), str(video_filename))
             else:
                 raise SingleException()
                 exit(1)
-        
+
         print('Downloading audio')
         try:
             ## highest_br.download(output_path = OUT_PATH, filename = audio_filename)
             ## os.system(f'yt-dlp -f bestaudio[ext=mp4] -o "{OUT_PATH}\\{audio_filename}" {url}')
+            ## os.system(f'yt-dlp -f bestaudio --cookies-from-browser firefox -P "{str(OUT_PATH)}" {url}')
             os.system(f'yt-dlp -f bestaudio -P "{str(OUT_PATH)}" {url}')
         except Exception as e:
             if(__name__ == '__main__'):
@@ -158,7 +165,7 @@ class Single():
                 sys.exit(1)
             else:
                 raise SingleException(f'{e}')
-                
+
         ## GET NAME OF DOWNLOADED AUDIO
         new_file_audio = None
         new_ext_audio = None
@@ -167,13 +174,13 @@ class Single():
                 new_file_audio = i
                 new_ext_audio = i.split('.')[-1]
                 break
-        
+
         if(not audio_only):
             print('Merging files with ffmpeg')
-            
+
             audio_filename = Path.joinpath(OUT_PATH, f'{title}_audio.{new_ext_audio}')
             os.rename(str(Path.joinpath(OUT_PATH, new_file_audio)), str(audio_filename))
-            
+
             if(os.path.isfile(audio_filename) and os.path.isfile(video_filename)):
                 try:
                     merged_filename = Path.joinpath(OUT_PATH, f'{title}.{new_ext}')
@@ -199,11 +206,29 @@ class Single():
             pickle.dump(PREEXISTING, f)
 
 if(__name__ == '__main__'):
-    if(len(sys.argv) != 2 and len(sys.argv) != 3):
-        print('Invalid arguments')
-        sys.exit(1)
-    if(len(sys.argv) == 3 and sys.argv[2] != '/a'):
-        print('Invalid third argument')
-        sys.exit(1)
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '-u',
+        '--url',
+        dest = 'url',
+        type = str,
+        required = True,
+        help = 'The URL of the video to be downloaded'
+    )
+    ## Boolean flags
+    parser.add_argument(
+        '--premium',
+        dest = 'premium',
+        action = 'store_true',
+        help = 'Use cookies from firefox to download premium video'
+    )
+    parser.add_argument(
+        '--audio-only',
+        dest = 'audio_only',
+        action = 'store_true',
+        help = 'Download audio only'
+    )
+    args = parser.parse_args()
+
     Single.set_out_path(OUT_PATH)
-    Single.download(sys.argv[1], len(sys.argv) == 3)
+    Single.download(url = args.url, audio_only = args.audio_only)
