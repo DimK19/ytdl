@@ -1,10 +1,11 @@
-import re
 import os
 import sys
 from configparser import ConfigParser
 import pickle
 from pathlib import Path
 import argparse
+
+from string_utils import sanitize
 
 from yt_dlp import YoutubeDL
 
@@ -16,11 +17,6 @@ FFMPEG_PATH = Path(config['PATHS']['FFMPEG_PATH'])
 PKLP = Path.joinpath(OUT_PATH, 'preexisting.pkl')
 
 PREEXISTING = []
-
-def sanitize(s: str):
-    res = re.sub(r'[^\u0370-\u03ff\u1f00-\u1fffa-zA-Z0-9 ]', '', s.strip())
-    ## the regular expression above matches all greek and latin characters, the digits and the space
-    return ' '.join(res.split())
 
 class SingleException(Exception):
     _message = 'Exception from Single'
@@ -47,13 +43,19 @@ class Single():
             PREEXISTING = list(map(lambda x: x.split('.')[0], os.listdir(OUT_PATH)))
 
     @staticmethod
-    def download(url: str, t: str = None, audio_only: bool = False):
+    def download(url: str, t: str = None, audio_only: bool = False, premium: bool = False):
         url = url.split('&')[0]
 
-        if(t is None)
+        if(t is None):
             try:
-                with YoutubeDL() as ytdl:
-                    original_title = ytdl.extract_info(url, download = False).get('title', None)
+                ydl_opts = {
+                    'quiet': True,
+                    'no_warnings': True,
+                }
+                with YoutubeDL(ydl_opts) as ytdl:
+                    info = ytdl.extract_info(url, download = False)
+                    original_title = info.get('title', 'NO TITLE')
+                    channel_name = info.get('channel', '')
             except Exception as e:
                 if(__name__ == '__main__'):
                     print(f'Exception: {e}')
@@ -62,6 +64,7 @@ class Single():
                     raise SingleException(f'{e}')
         else:
             original_title = t
+            channel_name = ''
         print(f'Title: {original_title}')
 
         ## print('Available versions:')
@@ -81,7 +84,7 @@ class Single():
         ## print(f'The version with the highest resolution: {highest_res}')
 
         ## GET SANITIZED TITLE FOR FILENAMES AND FILE EXTENSION
-        title = sanitize(original_title)
+        title = f'{sanitize(original_title)} [{sanitize(channel_name)}]'
         '''
         if(title in PREEXISTING):
             if(__name__ == '__main__'):

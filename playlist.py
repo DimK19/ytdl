@@ -4,11 +4,11 @@ import argparse
 from time import sleep
 from configparser import ConfigParser
 import os
-import re
 from pathlib import Path
 from itertools import islice
 
 from single import Single, SingleException
+from string_utils import sanitize
 
 from pytube import Playlist
 
@@ -25,12 +25,12 @@ url = ''
 
 def main():
     p = Playlist(url)
-    directory = Path.joinpath(OUT_PATH, re.sub(r'[^\u0370-\u03ff\u1f00-\u1fffa-zA-Z0-9 ]', '', p.title))
+    directory = Path.joinpath(OUT_PATH, sanitize(p.title))
     if(not os.path.isdir(directory)):
         os.mkdir(str(directory))
     Single.set_out_path(directory)
-    i = 0
-    generator = itertools.islice(p.url_generator, skip, stop - skip)
+    
+    generator = islice(p.url_generator(), skip, (None if stop is None else stop - skip))
     ##for t, u in zip(premium, p.url_generator()):
     for u in generator:
         ## Μπαμπινιώτης:
@@ -86,6 +86,7 @@ if(__name__ == '__main__'):
         help = 'Stop downloading after this many playlist items'
     )
     args = parser.parse_args()
+    url = args.url
     audio_only = args.audio_only
     premium = args.premium
     skip = args.pl_skip
