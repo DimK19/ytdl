@@ -16,7 +16,7 @@ OUT_PATH = Path(config['PATHS']['OUT_PATH'])
 FFMPEG_PATH = Path(config['PATHS']['FFMPEG_PATH'])
 PKLP = Path.joinpath(OUT_PATH, 'preexisting.pkl')
 
-PREEXISTING = []
+PREEXISTING = set()
 
 class SingleException(Exception):
     _message = 'Exception from Single'
@@ -40,7 +40,7 @@ class Single():
             with open(str(PKLP), 'rb') as f:
                 PREEXISTING = pickle.load(f)
         else:
-            PREEXISTING = list(map(lambda x: x.split('.')[0], os.listdir(OUT_PATH)))
+            PREEXISTING = set(map(lambda x: x.split('.')[0], os.listdir(OUT_PATH)))
 
     @staticmethod
     def download(url: str, t: str = None, audio_only: bool = False, premium: bool = False):
@@ -67,42 +67,23 @@ class Single():
             channel_name = ''
         print(f'Title: {original_title}')
 
-        ## print('Available versions:')
-
-        ## GET ALL VIDEOS AND SORT BY RESOLUTION
-        ## video_list = list(y.streams.filter(type = 'video').order_by('resolution'))
-        ## print(*y.streams, sep = '\n')
-        ## highest_res = video_list[-1]
-        ## the command below does not have the desired behaviour
-        ## highest_res = y.streams.filter(file_extension = 'mp4').get_highest_resolution()
-        ## https://pytube.io/en/latest/user/streams.html?highlight=progressive#dash-vs-progressive-streams
-        ## see the documentation in the webpage linked above for explanation
-        ## generally the documentation is adequate - sufficiently succinct
-        ## though it does include some ambiguities, for example it claims that
-        ## 'resolution' is used as an alias of 'res', even though for ordering
-        ## streams the correct name is the first, as seen by looking at the object's __dict__
-        ## print(f'The version with the highest resolution: {highest_res}')
-
         ## GET SANITIZED TITLE FOR FILENAMES AND FILE EXTENSION
         title = f'{sanitize(original_title)} [{sanitize(channel_name)}]'
-        '''
+        
         if(title in PREEXISTING):
             if(__name__ == '__main__'):
                 print('Video already downloaded.')
                 sys.exit(0)
             else:
                 raise SingleException('Video already downloaded.')
-        '''
-        ## extension = highest_res.default_filename.split('.')[1]
 
         ytdl_title = f"{original_title} [{url.split('/')[-1].split('&')[0][8:]}]"
         ## DOWNLOAD HIGHEST RESOLUTION
         if(not audio_only):
-            ## highest_res.download(output_path = OUT_PATH, filename = video_filename)
             print('Downloading highest resolution video')
             try:
-                cmd = os.system(f'yt-dlp -f bestvideo -P "{str(OUT_PATH)}" {url}')
-                ## cmd = os.system(f'yt-dlp -f bestvideo --cookies-from-browser firefox -P "{str(OUT_PATH)}" {url}')
+                command = f'yt-dlp -f bestvideo{" --cookies-from-browser firefox" if premium else ""} -P "{str(OUT_PATH)}" {url}'
+                cmd = os.system(command)
                 '''
                 WARNING: "-f best" selects the best pre-merged format which is often not the best option.
                 To let yt-dlp download and merge the best available formats, simply do not pass any format selection.
@@ -116,28 +97,6 @@ class Single():
                     sys.exit(1)
                 else:
                     raise SingleException(f'{e}')
-
-            ## EXAMINE IF THE HIGHEST RESOLUTION VIDEO IS "PROGRESSIVE", THAT
-            ## IS, IF IT CONTAINS SOUND
-            '''
-            if(highest_res.is_progressive == True):
-                print('Highest resolution video file contains audio.')
-            '''
-
-            ## IF NOT, DOWNLOAD AUDIO FILE SEPARATELY AND MERGE THE TWO WITH FFMPEG
-            ## else:
-            ## print('Highest resolution video file does not contain sound. Available audio files:')
-            ## TODO: prioritize mp4 audio over webm
-            ## audio_list = list(y.streams.filter(type = 'audio', subtype = 'mp4').order_by('abr'))
-            '''
-            if(not audio_list):
-                audio_list = list(y.streams.filter(type = 'audio').order_by('abr'))
-            ## print(*audio_list, sep = '\n')
-            highest_br = audio_list[-1]
-            print(f'The version with the highest bit rate: {highest_br}')
-
-            extension = highest_br.default_filename.split('.')[1]
-            '''
 
             ## GET NAME OF DOWNLOADED VIDEO
             new_file = None
@@ -158,10 +117,8 @@ class Single():
 
         print('Downloading audio')
         try:
-            ## highest_br.download(output_path = OUT_PATH, filename = audio_filename)
-            ## os.system(f'yt-dlp -f bestaudio[ext=mp4] -o "{OUT_PATH}\\{audio_filename}" {url}')
-            ## os.system(f'yt-dlp -f bestaudio --cookies-from-browser firefox -P "{str(OUT_PATH)}" {url}')
-            os.system(f'yt-dlp -f bestaudio -P "{str(OUT_PATH)}" {url}')
+            command = f'yt-dlp -f bestaudio{" --cookies-from-browser firefox" if premium else ""} -P "{str(OUT_PATH)}" {url}'
+            os.system(command)
         except Exception as e:
             if(__name__ == '__main__'):
                 print(f'Exception: {e}')
@@ -204,7 +161,7 @@ class Single():
             os.rename(str(Path.joinpath(OUT_PATH, new_file_audio)), str(audio_filename))
 
         ## Finally append new file name to pickle
-        PREEXISTING.append(title)
+        PREEXISTING.add(title)
         with open(PKLP, 'wb') as f:
             pickle.dump(PREEXISTING, f)
 
@@ -218,6 +175,7 @@ if(__name__ == '__main__'):
         required = True,
         help = 'The URL of the video to be downloaded'
     )
+    
     ## Boolean flags
     parser.add_argument(
         '--premium',

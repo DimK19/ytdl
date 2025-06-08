@@ -1,5 +1,3 @@
-## https://superuser.com/questions/1804415/how-to-get-playlist-title-with-yt-dlp
-## https://github.com/yt-dlp/yt-dlp/issues/2117
 import argparse
 from time import sleep
 from configparser import ConfigParser
@@ -10,7 +8,7 @@ from itertools import islice
 from single import Single, SingleException
 from string_utils import sanitize
 
-from pytube import Playlist
+from yt_dlp import YoutubeDL
 
 config = ConfigParser()
 config.read('config.ini', encoding = 'utf-8')
@@ -23,29 +21,63 @@ skip = 0
 stop = None
 url = ''
 
+def get_playlist_title(url):
+    ydl_opts = {
+        'quiet': True,
+        'no_warnings': True,
+        'extract_flat': True,
+    }
+
+    try:
+        with YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download = False)
+            return info.get('title')
+    except Exception as e:
+        print(f'Error: {e}')
+        sys.exit(1)
+
+def url_generator(u):
+    ydl_opts = {
+        'quiet': True,
+        'no_warnings': True,
+        'extract_flat': True,  ## Don't download metadata for each video
+        'force_generic_extractor': False
+    }
+
+    with YoutubeDL(ydl_opts) as ydl:
+        playlist_dict = ydl.extract_info(url, download = False)
+
+        if('entries' not in playlist_dict):
+            raise ValueError('Invalid playlist URL or no entries found.')
+
+        for entry in playlist_dict['entries']:
+            ## Each entry is a dict with 'url' and optionally 'title' etc.
+            yield f"https://www.youtube.com/watch?v={entry['id']}"
+
 def main():
-    p = Playlist(url)
-    directory = Path.joinpath(OUT_PATH, sanitize(p.title))
+    directory = Path.joinpath(OUT_PATH, sanitize(get_playlist_title(url)))
     if(not os.path.isdir(directory)):
         os.mkdir(str(directory))
     Single.set_out_path(directory)
     
-    generator = islice(p.url_generator(), skip, (None if stop is None else stop - skip))
-    ##for t, u in zip(premium, p.url_generator()):
-    for u in generator:
-        ## Μπαμπινιώτης:
-        ## https://www.youtube.com/playlist?list=PL9wtvO3_pCB1BRuwbwI8-u3i3-CW3YX-y
-        ## Κούτυλας premium:
-        ## https://www.youtube.com/playlist?list=PLi1hj7aavfxy7k6SOaNcM6OneaUFmhwUD
-        ## Κούτυλας:
-        ## https://www.youtube.com/playlist?list=PLi1hj7aavfxwqSLv1rkzuHn3_D4TR2dvo
-        try:
-            Single.download(url = u, audio_only = audio_only, premium = premium)
-            ## os.system(f'yt-dlp --cookies-from-browser firefox -P "{str(OUT_PATH)}" {v}')
-        except SingleException as e:
-            print(f'Exception: {e}')
-            continue
-        sleep(20)
+    generator = islice(url_generator(url), skip, (None if stop is None else stop - skip))
+    if(not premium):
+        for u in generator:
+            try:
+                Single.download(url = u, audio_only = audio_only)
+            except SingleException as e:
+                print(f'Exception: {e}')
+                continue
+            sleep(20)
+    else:
+        for t, u in zip(premium, generator):
+            try:
+                Single.download(url = u, t = t, audio_only = audio_only, premium = premium)
+                ## os.system(f'yt-dlp --cookies-from-browser firefox -P "{str(OUT_PATH)}" {v}')
+            except SingleException as e:
+                print(f'Exception: {e}')
+                continue
+            sleep(20)            
 
 if(__name__ == '__main__'):
     parser = argparse.ArgumentParser()
@@ -57,6 +89,7 @@ if(__name__ == '__main__'):
         required = True,
         help = 'The URL of the video to be downloaded'
     )
+    
     ## Boolean flags
     parser.add_argument(
         '--premium',
@@ -70,25 +103,28 @@ if(__name__ == '__main__'):
         action = 'store_true',
         help = 'Download audio only'
     )
+    
     ## Integer arguments
     parser.add_argument(
-        '--playlist-skip',
+        '--skip',
         dest = 'pl_skip',
         type = int,
         default = 0,
         help = 'Number of items to skip in the playlist before starting downloading'
     )
     parser.add_argument(
-        '--playlist-stop',
+        '--stop',
         dest = 'pl_stop',
         type = int,
         default = None,
         help = 'Stop downloading after this many playlist items'
     )
     args = parser.parse_args()
+    
     url = args.url
     audio_only = args.audio_only
     premium = args.premium
     skip = args.pl_skip
     stop = args.pl_stop
+    
     main()
