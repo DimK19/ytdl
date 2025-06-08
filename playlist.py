@@ -70,7 +70,7 @@ def main():
                 continue
             sleep(20)
     else:
-        for t, u in zip(premium, generator):
+        for t, u in zip(premium_names, generator):
             try:
                 Single.download(url = u, t = t, audio_only = audio_only, premium = premium)
                 ## os.system(f'yt-dlp --cookies-from-browser firefox -P "{str(OUT_PATH)}" {v}')
