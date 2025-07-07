@@ -20,6 +20,7 @@ audio_only = False
 skip = 0
 stop = None
 url = ''
+cn = ''
 
 def get_playlist_title(url):
     ydl_opts = {
@@ -59,7 +60,7 @@ def main():
     if(not os.path.isdir(directory)):
         os.mkdir(str(directory))
     Single.set_out_path(directory)
-    
+
     generator = islice(url_generator(url), skip, (None if stop is None else stop - skip))
     if(not premium):
         for u in generator:
@@ -72,12 +73,18 @@ def main():
     else:
         for t, u in zip(premium_names, generator):
             try:
-                Single.download(url = u, t = t, audio_only = audio_only, premium = premium)
+                Single.download(
+                    url = u,
+                    t = t,
+                    cn = cn,
+                    audio_only = audio_only,
+                    premium = premium
+                )
                 ## os.system(f'yt-dlp --cookies-from-browser firefox -P "{str(OUT_PATH)}" {v}')
             except SingleException as e:
                 print(f'Exception: {e}')
                 continue
-            sleep(20)            
+            sleep(20)
 
 if(__name__ == '__main__'):
     parser = argparse.ArgumentParser()
@@ -89,7 +96,7 @@ if(__name__ == '__main__'):
         required = True,
         help = 'The URL of the video to be downloaded'
     )
-    
+
     ## Boolean flags
     parser.add_argument(
         '--premium',
@@ -103,7 +110,7 @@ if(__name__ == '__main__'):
         action = 'store_true',
         help = 'Download audio only'
     )
-    
+
     ## Integer arguments
     parser.add_argument(
         '--skip',
@@ -119,12 +126,22 @@ if(__name__ == '__main__'):
         default = None,
         help = 'Stop downloading after this many playlist items'
     )
+
+    ## Additional options
+    parser.add_argument(
+        '--cn',
+        dest = 'channel_name',
+        type = str,
+        help = 'The name of the channel publishing the video'
+    )
+
     args = parser.parse_args()
-    
+
     url = args.url
     audio_only = args.audio_only
     premium = args.premium
+    cn = args.channel_name
     skip = args.pl_skip
     stop = args.pl_stop
-    
+
     main()

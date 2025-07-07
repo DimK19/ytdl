@@ -43,7 +43,7 @@ class Single():
             PREEXISTING = set(map(lambda x: x.split('.')[0], os.listdir(OUT_PATH)))
 
     @staticmethod
-    def download(url: str, t: str = None, audio_only: bool = False, premium: bool = False):
+    def download(url: str, t: str = None, cn: str = '', audio_only: bool = False, premium: bool = False):
         url = url.split('&')[0]
 
         if(t is None):
@@ -64,12 +64,13 @@ class Single():
                     raise SingleException(f'{e}')
         else:
             original_title = t
-            channel_name = ''
+            channel_name = cn
+
         print(f'Title: {original_title}')
 
         ## GET SANITIZED TITLE FOR FILENAMES AND FILE EXTENSION
         title = f'{sanitize(original_title)} [{sanitize(channel_name)}]'
-        
+
         if(title in PREEXISTING):
             if(__name__ == '__main__'):
                 print('Video already downloaded.')
@@ -112,7 +113,7 @@ class Single():
                 video_filename = Path.joinpath(OUT_PATH, f'{title}_video.{new_ext}')
                 os.rename(str(Path.joinpath(OUT_PATH, new_file)), str(video_filename))
             else:
-                raise SingleException()
+                raise SingleException('Downloaded video file not found')
                 exit(1)
 
         print('Downloading audio')
@@ -175,7 +176,7 @@ if(__name__ == '__main__'):
         required = True,
         help = 'The URL of the video to be downloaded'
     )
-    
+
     ## Boolean flags
     parser.add_argument(
         '--premium',
@@ -189,7 +190,21 @@ if(__name__ == '__main__'):
         action = 'store_true',
         help = 'Download audio only'
     )
+    parser.add_argument(
+        '--cn',
+        dest = 'channel_name',
+        type = str,
+        help = 'The name of the channel publishing the video'
+    )
     args = parser.parse_args()
 
+    if(args.premium and (args.channel_name is None)):
+        parser.error('--premium requires the specification of a channel name with --cn, because it can not be extracted automatically.')
+
     Single.set_out_path(OUT_PATH)
-    Single.download(url = args.url, audio_only = args.audio_only)
+    Single.download(
+        url = args.url,
+        cn = args.channel_name,
+        audio_only = args.audio_only,
+        premium = args.premium
+    )
