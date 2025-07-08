@@ -132,6 +132,7 @@ if(__name__ == '__main__'):
         '--cn',
         dest = 'channel_name',
         type = str,
+        default = None,
         help = 'The name of the channel publishing the video'
     )
 

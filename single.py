@@ -43,7 +43,7 @@ class Single():
             PREEXISTING = set(map(lambda x: x.split('.')[0], os.listdir(OUT_PATH)))
 
     @staticmethod
-    def download(url: str, t: str = None, cn: str = '', audio_only: bool = False, premium: bool = False):
+    def download(url: str, t: str = None, cn: str = None, audio_only: bool = False, premium: bool = False):
         url = url.split('&')[0]
 
         if(t is None):
@@ -56,6 +56,8 @@ class Single():
                     info = ytdl.extract_info(url, download = False)
                     original_title = info.get('title', 'NO TITLE')
                     channel_name = info.get('channel', '')
+                    if(cn is not None):
+                        channel_name = cn
             except Exception as e:
                 if(__name__ == '__main__'):
                     print(f'Exception: {e}')
@@ -194,6 +196,7 @@ if(__name__ == '__main__'):
         '--cn',
         dest = 'channel_name',
         type = str,
+        default = None,
         help = 'The name of the channel publishing the video'
     )
     args = parser.parse_args()
