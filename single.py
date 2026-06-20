@@ -43,8 +43,17 @@ class Single():
             PREEXISTING = set(map(lambda x: x.split('.')[0], os.listdir(OUT_PATH)))
 
     @staticmethod
-    def download(url: str, t: str = None, cn: str = None, audio_only: bool = False, premium: bool = False):
+    def download(
+        url: str,
+        t: str = None,
+        cn: str = None,
+        audio_only: bool = False,
+        premium: bool = False,
+        resolution: int = None
+    ):
         url = url.split('&')[0]
+        
+        premium = True
 
         if(t is None):
             try:
@@ -56,6 +65,7 @@ class Single():
                     info = ytdl.extract_info(url, download = False)
                     original_title = info.get('title', 'NO TITLE')
                     channel_name = info.get('channel', '')
+                    print(f'CHANNEL NAME {cn}')
                     if(cn is not None):
                         channel_name = cn
             except Exception as e:
@@ -85,7 +95,14 @@ class Single():
         if(not audio_only):
             print('Downloading highest resolution video')
             try:
-                command = f'yt-dlp -f bestvideo{" --cookies-from-browser firefox" if premium else ""} -P "{str(OUT_PATH)}" {url}'
+                command = 'yt-dlp --js-runtimes node'
+                if(resolution is not None):
+                    command += f' -S "+height:{resolution}"'
+                command += ' -f bestvideo'
+                if(premium):
+                    command += " --cookies-from-browser firefox"
+                command += f' -P "{str(OUT_PATH)}" {url}'
+                
                 cmd = os.system(command)
                 '''
                 WARNING: "-f best" selects the best pre-merged format which is often not the best option.
@@ -120,7 +137,7 @@ class Single():
 
         print('Downloading audio')
         try:
-            command = f'yt-dlp -f bestaudio{" --cookies-from-browser firefox" if premium else ""} -P "{str(OUT_PATH)}" {url}'
+            command = f'yt-dlp --remote-components ejs:github --js-runtimes node -f bestaudio{" --cookies-from-browser firefox" if premium else ""} -P "{str(OUT_PATH)}" {url}'
             os.system(command)
         except Exception as e:
             if(__name__ == '__main__'):
@@ -199,6 +216,14 @@ if(__name__ == '__main__'):
         default = None,
         help = 'The name of the channel publishing the video'
     )
+    parser.add_argument(
+        '--res',
+        dest = 'resolution',
+        type = int,
+        default = None,
+        help = 'The video resolution height in pixels'
+    )
+    
     args = parser.parse_args()
 
     if(args.premium and (args.channel_name is None)):
@@ -209,5 +234,6 @@ if(__name__ == '__main__'):
         url = args.url,
         cn = args.channel_name,
         audio_only = args.audio_only,
-        premium = args.premium
+        premium = args.premium,
+        resolution = args.resolution
     )

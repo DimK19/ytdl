@@ -2,6 +2,7 @@ import argparse
 from time import sleep
 from configparser import ConfigParser
 import os
+import sys
 from pathlib import Path
 from itertools import islice
 
@@ -14,7 +15,12 @@ config = ConfigParser()
 config.read('config.ini', encoding = 'utf-8')
 OUT_PATH = Path(config['PATHS']['OUT_PATH'])
 
-premium_names = []
+try:
+    with open('premiumTitles.txt', 'r', encoding = 'utf-8') as f:
+        premium_names = list(map(lambda x: x.rstrip('\n'), f.readlines()))
+except:
+    premium_names = []
+    
 premium = False
 audio_only = False
 skip = 0
@@ -61,7 +67,7 @@ def main():
         os.mkdir(str(directory))
     Single.set_out_path(directory)
 
-    generator = islice(url_generator(url), skip, (None if stop is None else stop - skip))
+    generator = islice(url_generator(url), skip, (None if stop is None else stop + skip))
     if(not premium):
         for u in generator:
             try:
@@ -78,7 +84,8 @@ def main():
                     t = t,
                     cn = cn,
                     audio_only = audio_only,
-                    premium = premium
+                    premium = premium,
+                    resolution = res
                 )
                 ## os.system(f'yt-dlp --cookies-from-browser firefox -P "{str(OUT_PATH)}" {v}')
             except SingleException as e:
@@ -135,6 +142,14 @@ if(__name__ == '__main__'):
         default = None,
         help = 'The name of the channel publishing the video'
     )
+    
+    parser.add_argument(
+        '--res',
+        dest = 'resolution',
+        type = int,
+        default = None,
+        help = 'The video resolution height in pixels'
+    )
 
     args = parser.parse_args()
 
@@ -144,5 +159,6 @@ if(__name__ == '__main__'):
     cn = args.channel_name
     skip = args.pl_skip
     stop = args.pl_stop
+    res = args.resolution
 
     main()
