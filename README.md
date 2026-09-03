@@ -16,10 +16,12 @@ FFMPEG_PATH = C:\\...\\ffmpeg-6.1-essentials_build\\bin
 #### Usage
 To download a single video at the best available quality: `single.py -u [VIDEO URL]`. Optional flags for `single.py`:
 - `--audio-only`
-- `--premium`: for members-only videos. Currently, this works by getting the cookies from firefox. In this case, video title and channel name must be defined manually within the code.
+- `--premium`: for members-only videos. **Currently, this works by getting the cookies from firefox. In this case, video title and channel name cannot be extracted automatically**. They must be defined manually within the code: see the command below for channel name, and see the code to create the necessary `premiumTitles.txt` file.
+- `--res`: The video resolution **height** in pixels.
+- `--cn`: The name of the channel publishing the video.
 
 Similarly for `playlist.py`. In addition to the arguments above, playlist also supports:
 - `--skip`: number of items to skip in the playlist before starting download.
 - `--stop`: stop downloading after this many playlist items.
 
-Issues are often resolved by updating to the latest version of `yt-dlp`.
+_Issues are often resolved by updating to the latest version of `yt-dlp`._
