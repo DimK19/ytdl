@@ -1,6 +1,7 @@
 import re
 
-def sanitize(s: str):
-    res = re.sub(r'[^\u0370-\u03ff\u1f00-\u1fffa-zA-Z0-9&()-. ]', '', s.strip())
-    ## the regular expression above matches all greek and latin characters, the digits and the space
+def sanitize(s: str) -> str:
+    ## The regular expression below matches < > : " / \ | ? * and ASCII control characters (0-31)
+    ## to exclude them as they are disallowd in file names
+    res = re.sub(r'[<>:"/\\|?*\x00-\x1f]', '', s.strip())
     return ' '.join(res.split())

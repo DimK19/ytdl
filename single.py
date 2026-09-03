@@ -16,7 +16,7 @@ OUT_PATH = Path(config['PATHS']['OUT_PATH'])
 FFMPEG_PATH = Path(config['PATHS']['FFMPEG_PATH'])
 PKLP = Path.joinpath(OUT_PATH, 'preexisting.pkl')
 
-PREEXISTING = set()
+PREEXISTING = dict()
 
 class SingleException(Exception):
     _message = 'Exception from Single'
@@ -39,8 +39,6 @@ class Single():
         if(os.path.isfile(PKLP)):
             with open(str(PKLP), 'rb') as f:
                 PREEXISTING = pickle.load(f)
-        else:
-            PREEXISTING = set(map(lambda x: x.split('.')[0], os.listdir(OUT_PATH)))
 
     @staticmethod
     def download(
@@ -52,45 +50,41 @@ class Single():
         resolution: int = None
     ):
         url = url.split('&')[0]
-        
-        premium = True
 
-        if(t is None):
-            try:
-                ydl_opts = {
-                    'quiet': True,
-                    'no_warnings': True,
-                }
-                with YoutubeDL(ydl_opts) as ytdl:
-                    info = ytdl.extract_info(url, download = False)
-                    original_title = info.get('title', 'NO TITLE')
-                    channel_name = info.get('channel', '')
-                    print(f'CHANNEL NAME {cn}')
-                    if(cn is not None):
-                        channel_name = cn
-            except Exception as e:
-                if(__name__ == '__main__'):
-                    print(f'Exception: {e}')
-                    sys.exit(1)
-                else:
-                    raise SingleException(f'{e}')
-        else:
-            original_title = t
-            channel_name = cn
+        try:
+            ydl_opts = {
+                'quiet': True,
+                'no_warnings': True,
+            }
+            with YoutubeDL(ydl_opts) as ytdl:
+                info = ytdl.extract_info(url, download = False)
+                original_title = t if t else info.get('title', 'NO TITLE')
+                channel_name = cn if cn else info.get('channel', '')
+        except Exception as e:
+            if(__name__ == '__main__'):
+                print(f'Exception: {e}')
+                sys.exit(1)
+            else:
+                raise SingleException(f'{e}')
 
         print(f'Title: {original_title}')
+        
+        ## Grab the video ID from the metadata dictionary if not manually passed, 
+        ## but since yt-dlp extracted it, it's safer. Fallback just in case.
+        video_id = info.get('id') if 'info' in locals() else url.split('v=')[-1][:11]
 
         ## GET SANITIZED TITLE FOR FILENAMES AND FILE EXTENSION
-        title = f'{sanitize(original_title)} [{sanitize(channel_name)}]'
+        title = f'{sanitize(original_title)} - {sanitize(channel_name)} [{video_id}]'
+        video_template = Path.joinpath(OUT_PATH, f'{title}_video.%(ext)s')
+        audio_template = Path.joinpath(OUT_PATH, f'{title}_audio.%(ext)s')
 
-        if(title in PREEXISTING):
+        if(video_id in PREEXISTING):
             if(__name__ == '__main__'):
                 print('Video already downloaded.')
                 sys.exit(0)
             else:
                 raise SingleException('Video already downloaded.')
 
-        ytdl_title = f"{original_title} [{url.split('/')[-1].split('&')[0][8:]}]"
         ## DOWNLOAD HIGHEST RESOLUTION
         if(not audio_only):
             print('Downloading highest resolution video')
@@ -99,9 +93,8 @@ class Single():
                 if(resolution is not None):
                     command += f' -S "+height:{resolution}"'
                 command += ' -f bestvideo'
-                if(premium):
-                    command += " --cookies-from-browser firefox"
-                command += f' -P "{str(OUT_PATH)}" {url}'
+                command += " --cookies-from-browser firefox"
+                command += f' -o "{str(video_template)}" {url}'
                 
                 cmd = os.system(command)
                 '''
@@ -119,25 +112,26 @@ class Single():
                     raise SingleException(f'{e}')
 
             ## GET NAME OF DOWNLOADED VIDEO
-            new_file = None
-            new_ext = None
+            '''
             for i in os.listdir(OUT_PATH):
-                ## YT video title may contain '.'
-                if(sanitize('.'.join(i.split('.')[:-1])) == sanitize(ytdl_title)):
-                    new_file = i
-                    new_ext = i.split('.')[-1]
+                if i.startswith(f'{title}_video.'):
+                    video_filename = Path.joinpath(OUT_PATH, i)
+                    new_ext = video_filename.suffix[1:]
                     break
-
-            if(not(new_file is None)):
-                video_filename = Path.joinpath(OUT_PATH, f'{title}_video.{new_ext}')
-                os.rename(str(Path.joinpath(OUT_PATH, new_file)), str(video_filename))
-            else:
-                raise SingleException('Downloaded video file not found')
-                exit(1)
+            '''
+            try:
+                # glob returns a generator, list()[0] gets the actual Path object
+                video_filename = list(OUT_PATH.glob(f'*{video_id}*_video.*'))[0]
+                new_ext = video_filename.suffix[1:]
+            except IndexError:
+                raise SingleException('Downloaded video file could not be found.')
 
         print('Downloading audio')
         try:
-            command = f'yt-dlp --remote-components ejs:github --js-runtimes node -f bestaudio{" --cookies-from-browser firefox" if premium else ""} -P "{str(OUT_PATH)}" {url}'
+            command = 'yt-dlp --remote-components ejs:github --js-runtimes node -f bestaudio'
+            command += ' --cookies-from-browser firefox'
+            command += f' -o "{str(audio_template)}" {url}'
+            
             os.system(command)
         except Exception as e:
             if(__name__ == '__main__'):
@@ -147,25 +141,28 @@ class Single():
                 raise SingleException(f'{e}')
 
         ## GET NAME OF DOWNLOADED AUDIO
-        new_file_audio = None
-        new_ext_audio = None
+        '''
         for i in os.listdir(OUT_PATH):
-            if(sanitize('.'.join(i.split('.')[:-1])) == sanitize(ytdl_title)):
-                new_file_audio = i
-                new_ext_audio = i.split('.')[-1]
+            if i.startswith(f'{title}_audio.'):
+                audio_filename = Path.joinpath(OUT_PATH, i)
+                new_ext_audio = audio_filename.suffix[1:]
                 break
-
+        '''
+        try:
+            audio_filename = list(OUT_PATH.glob(f'*{video_id}*_audio.*'))[0]
+            new_ext_audio = audio_filename.suffix[1:]
+        except IndexError:
+            raise SingleException('Downloaded audio file could not be found.')
+        
         if(not audio_only):
             print('Merging files with ffmpeg')
-
-            audio_filename = Path.joinpath(OUT_PATH, f'{title}_audio.{new_ext_audio}')
-            os.rename(str(Path.joinpath(OUT_PATH, new_file_audio)), str(audio_filename))
 
             if(os.path.isfile(audio_filename) and os.path.isfile(video_filename)):
                 try:
                     merged_filename = Path.joinpath(OUT_PATH, f'{title}.{new_ext}')
                     cmd = os.system(f'{str(Path.joinpath(FFMPEG_PATH, "ffmpeg"))} -i "{str(video_filename)}" -i "{str(audio_filename)}" -c copy "{str(merged_filename)}"')
                     if(cmd == 0):
+                        pass
                         os.remove(str(video_filename))
                         os.remove(str(audio_filename))
                     else:
@@ -177,11 +174,11 @@ class Single():
                     else:
                         raise SingleException(f'{e}')
         else:
-            audio_filename = Path.joinpath(OUT_PATH, f'{title}.{new_ext_audio}')
-            os.rename(str(Path.joinpath(OUT_PATH, new_file_audio)), str(audio_filename))
+            final_audio_filename = Path.joinpath(OUT_PATH, f'{title}.{new_ext_audio}')
+            os.rename(str(audio_filename), str(final_audio_filename))
 
         ## Finally append new file name to pickle
-        PREEXISTING.add(title)
+        PREEXISTING[video_id] = original_title
         with open(PKLP, 'wb') as f:
             pickle.dump(PREEXISTING, f)
 

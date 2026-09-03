@@ -87,7 +87,6 @@ def main():
                     premium = premium,
                     resolution = res
                 )
-                ## os.system(f'yt-dlp --cookies-from-browser firefox -P "{str(OUT_PATH)}" {v}')
             except SingleException as e:
                 print(f'Exception: {e}')
                 continue
@@ -152,6 +151,9 @@ if(__name__ == '__main__'):
     )
 
     args = parser.parse_args()
+    
+    if(args.premium and (args.channel_name is None)):
+        parser.error('--premium requires the specification of a channel name with --cn, because it can not be extracted automatically.')
 
     url = args.url
     audio_only = args.audio_only
