@@ -77,22 +77,23 @@ class Single():
         title = f'{sanitize(original_title)} - {sanitize(channel_name)} [{video_id}]'
         video_template = Path.joinpath(OUT_PATH, f'{title}_video.%(ext)s')
         audio_template = Path.joinpath(OUT_PATH, f'{title}_audio.%(ext)s')
-
+        '''
         if(video_id in PREEXISTING):
             if(__name__ == '__main__'):
                 print('Video already downloaded.')
                 sys.exit(0)
             else:
                 raise SingleException('Video already downloaded.')
-
-        ## DOWNLOAD HIGHEST RESOLUTION
+        '''
+        ## DOWNLOAD VIDEO
         if(not audio_only):
-            print('Downloading highest resolution video')
+            print('Downloading video')
             try:
                 command = 'yt-dlp --js-runtimes node'
                 if(resolution is not None):
-                    command += f' -S "+height:{resolution}"'
-                command += ' -f bestvideo'
+                    command += f' -f "bestvideo[height<={resolution}]/bestvideo"'
+                else:
+                    command += ' -f bestvideo'
                 command += " --cookies-from-browser firefox"
                 command += f' -o "{str(video_template)}" {url}'
                 

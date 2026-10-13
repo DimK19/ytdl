@@ -71,7 +71,12 @@ def main():
     if(not premium):
         for u in generator:
             try:
-                Single.download(url = u, audio_only = audio_only)
+                Single.download(
+                    url = u,
+                    cn = cn,
+                    audio_only = audio_only,
+                    resolution = res
+                )
             except SingleException as e:
                 print(f'Exception: {e}')
                 continue
